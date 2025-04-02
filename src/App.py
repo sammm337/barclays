@@ -6,7 +6,7 @@ import json
 
 app = Flask(__name__)
 CORS(app, origins="https://barclays-efxp.vercel.app/")  # Enable CORS to allow frontend access
-
+# CORS(app, origins="http://localhost:8080")
 # Sample database of quiz questions
 questions_db = {
     "react": [
@@ -101,6 +101,12 @@ def add_cors_headers(response):
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     return response
+
+# def add_cors_headers(response):
+#     response.headers["Access-Control-Allow-Origin"] = "http://localhost:8080"
+#     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+#     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+#     return response
 
 
 @app.route("/generate-quiz", methods=["POST"])

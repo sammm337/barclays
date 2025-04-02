@@ -18,9 +18,9 @@ import {
 
 interface ResearchPaperResult {
   Summary: string;
-  KeyPoints: string[];
-  PaperAnalysis: string;
-  Topics: string[];
+  KeyTerms: string[];
+  RiskAssessment: string;
+  NegotiationPoints: string[];
 }
 
 interface ComparisonResult {
@@ -45,9 +45,7 @@ interface Toast {
 const ResearchPaperAnalyzer = () => {
   const [file, setFile] = useState<File | null>(null);
   const [results, setResults] = useState<ResearchPaperResult[]>([]);
-  const [papers, setPapers] = useState<ResearchPaper[]>([]);
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(false);
   const [comparing, setComparing] = useState(false);
   const [regenerationsLeft, setRegenerationsLeft] = useState(3);
   const [paperText, setPaperText] = useState<string>("");
@@ -60,7 +58,6 @@ const ResearchPaperAnalyzer = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Custom toast function
   const addToast = (toast: Toast) => {
     setToasts((prev) => [...prev, toast]);
     setTimeout(() => {
@@ -80,15 +77,19 @@ const ResearchPaperAnalyzer = () => {
     addToast({ id: Date.now().toString(), title, description, variant });
   };
 
-  // Extract text from uploaded file
   const extractTextFromFile = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("pdf", file);
 
-    const response = await fetch("https://barclays-1.onrender.com/extract-pdf", {
+    // const response = await fetch("http://localhost:10000/extract-pdf", {
+    //   method: "POST",
+    //   body: formData,
+    // });
+     const response = await fetch("https://barclays-1.onrender.com/extract-pdf", {
       method: "POST",
       body: formData,
     });
+
 
     if (!response.ok) {
       throw new Error("Failed to process the file");
@@ -98,57 +99,48 @@ const ResearchPaperAnalyzer = () => {
     return data.text;
   };
 
-  // Analyze research paper and extract key topics
   const analyzeResearchPaper = async (text: string) => {
     setLoading(true);
     try {
       const prompt = `You are a financial analyst specializing in investment agreements. Analyze the provided term sheet text and return your findings in strictly valid JSON format:
       {
         "Summary": "a concise summary of the term sheet",
-        "KeyTerms": ["key terms and conditions outlined in the term sheet"],
+        "KeyTerms": ["key terms, numeric terms and conditions outlined in the term sheet"],
         "RiskAssessment": "detailed analysis of potential risks and implications",
         "NegotiationPoints": ["Top 3-5 key points that may require further negotiation or clarification"]
       }
       Term Sheet Text: ${text}
       Ensure your response is ONLY the JSON object, with no additional text or markdown.`;
-
-
+  
       const response = await chatSession.sendMessage(prompt);
       const resultText = await response.response.text();
-
+  
       const jsonMatch = resultText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error("Invalid response format");
       }
-
+  
       const parsedResult = JSON.parse(jsonMatch[0]);
-
+  
       if (
         !parsedResult.Summary ||
-        !Array.isArray(parsedResult.KeyPoints) ||
-        !parsedResult.PaperAnalysis ||
-        !Array.isArray(parsedResult.Topics)
+        !Array.isArray(parsedResult.KeyTerms) ||
+        !parsedResult.RiskAssessment ||
+        !Array.isArray(parsedResult.NegotiationPoints)
       ) {
+        console.log("Invalid response:", parsedResult);
         throw new Error("Invalid response structure");
-        console.log(resultText);
       }
-
-      // Add the new result to the results array
+  
       const newResults = [...results, parsedResult];
       setResults(newResults);
-
-      // Set the newest result as active
       setActiveResultIndex(newResults.length - 1);
-
-      // Reset comparison view if it was active
       setShowComparison(false);
-
-      fetchResearchPapers(parsedResult.Topics);
     } catch (error) {
-      console.error("Error analyzing research paper:", error);
+      console.error("Error analyzing term sheet:", error);
       showToast({
         title: "Analysis Error",
-        description: "An error occurred while analyzing the paper. Please try again.",
+        description: "An error occurred while analyzing the term sheet. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -156,7 +148,6 @@ const ResearchPaperAnalyzer = () => {
     }
   };
 
-  // Handle initial submission
   const handleSubmit = async () => {
     if (!file) {
       showToast({
@@ -168,7 +159,6 @@ const ResearchPaperAnalyzer = () => {
     }
 
     try {
-      // Reset previous results when uploading a new file
       setResults([]);
       setRegenerationsLeft(3);
       setActiveResultIndex(null);
@@ -188,7 +178,6 @@ const ResearchPaperAnalyzer = () => {
     }
   };
 
-  // Handle regeneration
   const handleRegenerate = async () => {
     if (regenerationsLeft <= 0) {
       showToast({
@@ -212,13 +201,11 @@ const ResearchPaperAnalyzer = () => {
     await analyzeResearchPaper(paperText);
   };
 
-  // Toggle between analysis results
   const toggleResult = (index: number) => {
     setActiveResultIndex(index);
     setShowComparison(false);
   };
 
-  // Compare all analyses
   const compareAnalyses = async () => {
     if (results.length < 2) {
       showToast({
@@ -231,12 +218,11 @@ const ResearchPaperAnalyzer = () => {
 
     setComparing(true);
     try {
-      // Prepare the analyses for comparison
       const analysesForComparison = results.map((result, index) => ({
         id: index + 1,
         summary: result.Summary,
-        keyPoints: result.KeyPoints,
-        topics: result.Topics,
+        keyPoints: result.KeyTerms,
+        topics: result.NegotiationPoints,
       }));
 
       const prompt = `Compare these ${results.length} analyses of the same research paper. Evaluate their relative quality, 
@@ -300,57 +286,13 @@ const ResearchPaperAnalyzer = () => {
     }
   };
 
-  // Fetch research papers from arXiv based on extracted topics
-  const fetchResearchPapers = async (topics: string[]) => {
-    if (topics.length === 0) {
-      showToast({
-        title: "Search Error",
-        description: "No topics found for search.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setFetching(true);
-    try {
-      const query = topics.slice(0, 3).join(" OR "); // Use the top 3 topics for search
-      const response = await axios.get(
-        `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(
-          query
-        )}&start=0&max_results=5`
-      );
-
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(response.data, "text/xml");
-      const entries = xmlDoc.getElementsByTagName("entry");
-
-      const fetchedPapers = Array.from(entries).map((entry) => ({
-        title: entry.getElementsByTagName("title")[0].textContent,
-        summary: entry.getElementsByTagName("summary")[0].textContent,
-        link: entry.getElementsByTagName("id")[0].textContent,
-      }));
-
-      setPapers(fetchedPapers);
-    } catch (error) {
-      console.error("Error fetching research papers:", error);
-      showToast({
-        title: "Fetch Error",
-        description: "Failed to fetch related research papers.",
-        variant: "destructive",
-      });
-    } finally {
-      setFetching(false);
-    }
-  };
-
-  // Combine all text for speech
   const getCombinedText = (result: ResearchPaperResult) => {
     return `Summary: ${result.Summary}. 
-            Key Points: ${result.KeyPoints.join(". ")}. 
-            Paper Analysis: ${result.PaperAnalysis}`;
+            Key Terms: ${result.KeyTerms.join(". ")}. 
+            Risk Assessment: ${result.RiskAssessment}
+            Negotiation Points: ${result.NegotiationPoints.join(". ")}`;
   };
 
-  // Add paper to learning path
   const addToLearningPath = (paper: ResearchPaper) => {
     if (savedPapers.some((p) => p.title === paper.title)) {
       showToast({
@@ -369,7 +311,6 @@ const ResearchPaperAnalyzer = () => {
     });
   };
 
-  // Remove paper from learning path
   const removeFromLearningPath = (paperTitle: string | null) => {
     if (!paperTitle) return;
 
@@ -383,7 +324,6 @@ const ResearchPaperAnalyzer = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 px-4 py-10 relative">
-      {/* Toast Container */}
       <div className="fixed top-5 right-5 space-y-3 z-50">
         {toasts.map((toast) => (
           <div
@@ -402,20 +342,19 @@ const ResearchPaperAnalyzer = () => {
         <CardHeader className="bg-gradient-to-r from-indigo-700 to-purple-700 text-white p-8">
           <div className="flex items-center justify-center mb-4">
             <BookOpen className="h-10 w-10 mr-3" />
-            <CardTitle className="text-3xl font-bold">Research Pathfinder</CardTitle>
+            <CardTitle className="text-3xl font-bold">Term Sheet Analyzer</CardTitle>
           </div>
           <p className="text-center text-white/90 max-w-xl mx-auto">
-            Upload a research paper to analyze its content, extract key topics, and discover related papers.
+            Upload a term sheet to analyze its content and extract key topics.
           </p>
         </CardHeader>
 
         <CardContent className="p-8 space-y-8">
-          {/* Upload Section */}
           <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-indigo-600" />
-                <h3 className="text-lg font-semibold text-gray-800">Upload Your Research Paper</h3>
+                <h3 className="text-lg font-semibold text-gray-800">Upload Your Term Sheet</h3>
               </div>
 
               <div
@@ -449,59 +388,13 @@ const ResearchPaperAnalyzer = () => {
                 ) : (
                   <span className="flex items-center gap-2">
                     <Layers className="h-4 w-4" />
-                    Analyze Paper &amp; Find Related
+                    Analyze Term Sheet
                   </span>
                 )}
               </Button>
             </div>
           </div>
 
-          {/* Learning Path Section */}
-          {savedPapers.length > 0 && (
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100">
-              <div
-                className="flex items-center gap-2 mb-4 cursor-pointer select-none"
-                onClick={() => setShowLearningPath((prev) => !prev)}
-              >
-                <Book className="h-5 w-5 text-indigo-600" />
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Your Learning Path ({savedPapers.length})
-                </h3>
-              </div>
-              {showLearningPath && (
-                <div className="space-y-3 mt-2">
-                  {savedPapers.map((paper, index) => (
-                    <div
-                      key={index}
-                      className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 relative flex justify-between items-center"
-                    >
-                      <div>
-                        <h4 className="font-medium text-indigo-700">{paper.title}</h4>
-                        <a
-                          href={paper.link || "#"}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-indigo-500 hover:underline mt-1 inline-block"
-                        >
-                          View on arXiv
-                        </a>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-gray-500 hover:text-red-500 p-1"
-                        onClick={() => removeFromLearningPath(paper.title)}
-                      >
-                        &times;
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Action Buttons */}
           {results.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-6">
               <Button
@@ -557,7 +450,6 @@ const ResearchPaperAnalyzer = () => {
             </div>
           )}
 
-          {/* Result Toggle and Display */}
           {results.length > 0 && !showComparison && (
             <div className="mt-6 space-y-6">
               <div className="flex items-center gap-2 mb-2">
@@ -593,9 +485,21 @@ const ResearchPaperAnalyzer = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                     <div className="p-6 bg-white rounded-xl border border-gray-100 shadow-sm">
-                      <h3 className="text-base font-semibold text-indigo-700 mb-2">Key Points</h3>
+                      <h3 className="text-base font-semibold text-indigo-700 mb-2">Key Terms</h3>
                       <ul className="space-y-2">
-                        {results[activeResultIndex].KeyPoints.map((point, pointIndex) => (
+                        {results[activeResultIndex].KeyTerms.map((term, termIndex) => (
+                          <li key={termIndex} className="flex gap-2 text-gray-700">
+                            <span className="text-indigo-500 font-bold">•</span>
+                            <span>{term}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="p-6 bg-white rounded-xl border border-gray-100 shadow-sm">
+                      <h3 className="text-base font-semibold text-indigo-700 mb-2">Negotiation Points</h3>
+                      <ul className="space-y-2">
+                        {results[activeResultIndex].NegotiationPoints.map((point, pointIndex) => (
                           <li key={pointIndex} className="flex gap-2 text-gray-700">
                             <span className="text-indigo-500 font-bold">•</span>
                             <span>{point}</span>
@@ -603,24 +507,12 @@ const ResearchPaperAnalyzer = () => {
                         ))}
                       </ul>
                     </div>
-
-                    <div className="p-6 bg-white rounded-xl border border-gray-100 shadow-sm">
-                      <h3 className="text-base font-semibold text-indigo-700 mb-2">Extracted Topics</h3>
-                      <ul className="space-y-2">
-                        {results[activeResultIndex].Topics.map((topic, topicIndex) => (
-                          <li key={topicIndex} className="flex gap-2 text-gray-700">
-                            <span className="text-indigo-500 font-bold">•</span>
-                            <span>{topic}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
                   </div>
 
                   <div className="p-6 bg-white rounded-xl border border-gray-100 shadow-sm mx-4 mb-4">
-                    <h3 className="text-base font-semibold text-indigo-700 mb-2">Paper Analysis</h3>
+                    <h3 className="text-base font-semibold text-indigo-700 mb-2">Risk Assessment</h3>
                     <p className="text-gray-700 whitespace-pre-line leading-relaxed">
-                      {results[activeResultIndex].PaperAnalysis}
+                      {results[activeResultIndex].RiskAssessment}
                     </p>
                   </div>
 
@@ -632,7 +524,6 @@ const ResearchPaperAnalyzer = () => {
             </div>
           )}
 
-          {/* Comparison View */}
           {showComparison && comparisonResults.length > 0 && (
             <div className="mt-6 space-y-6">
               <div className="flex items-center gap-2 mb-2">
@@ -723,53 +614,6 @@ const ResearchPaperAnalyzer = () => {
                   </span>{" "}
                   appears to be the most accurate and comprehensive analysis.
                 </p>
-              </div>
-            </div>
-          )}
-
-          {/* Display arXiv Papers */}
-          {papers.length > 0 && (
-            <div className="mt-6 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <BookOpen className="h-5 w-5 text-indigo-600" />
-                <h3 className="text-lg font-semibold text-gray-800">Related Research Papers</h3>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                {papers.map((paper, index) => (
-                  <div
-                    key={index}
-                    className="p-6 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all"
-                  >
-                    <div className="flex justify-between">
-                      <h4 className="font-bold text-indigo-700 mb-2">
-                        <a
-                          href={paper.link ? paper.link : undefined}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:underline"
-                        >
-                          {paper.title}
-                        </a>
-                      </h4>
-                      <Button
-                        onClick={() => addToLearningPath(paper)}
-                        size="sm"
-                        className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 h-8"
-                      >
-                        <span className="flex items-center gap-1">
-                          <PlusCircle className="h-3.5 w-3.5" />
-                          Add to Learning Path
-                        </span>
-                      </Button>
-                    </div>
-                    <p className="text-gray-700 mt-2 text-sm">
-                      {paper.summary && paper.summary.length > 300
-                        ? `${paper.summary.substring(0, 300)}...`
-                        : paper.summary}
-                    </p>
-                  </div>
-                ))}
               </div>
             </div>
           )}
