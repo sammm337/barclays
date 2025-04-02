@@ -130,6 +130,7 @@ const ResearchPaperAnalyzer = () => {
         !Array.isArray(parsedResult.Topics)
       ) {
         throw new Error("Invalid response structure");
+        console.log(resultText);
       }
 
       // Add the new result to the results array
