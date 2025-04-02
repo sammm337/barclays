@@ -102,15 +102,16 @@ const ResearchPaperAnalyzer = () => {
   const analyzeResearchPaper = async (text: string) => {
     setLoading(true);
     try {
-      const prompt = `You are an AI researcher. Analyze the provided research paper text and return your findings in strictly valid JSON format:
+      const prompt = `You are a financial analyst specializing in investment agreements. Analyze the provided term sheet text and return your findings in strictly valid JSON format:
       {
-        "Summary": "a concise summary of the paper",
-        "KeyPoints": ["key points or findings from the paper"],
-        "PaperAnalysis": "detailed analysis of the paper's contribution",
-        "Topics": ["Top 3-5 key topics extracted from the paper for further research"]
+        "Summary": "a concise summary of the term sheet",
+        "KeyTerms": ["key terms and conditions outlined in the term sheet"],
+        "RiskAssessment": "detailed analysis of potential risks and implications",
+        "NegotiationPoints": ["Top 3-5 key points that may require further negotiation or clarification"]
       }
-      Research Paper Text: ${text}
+      Term Sheet Text: ${text}
       Ensure your response is ONLY the JSON object, with no additional text or markdown.`;
+
 
       const response = await chatSession.sendMessage(prompt);
       const resultText = await response.response.text();

@@ -42,7 +42,7 @@ const Navigation = () => {
 
   const navItems = [
     // { name: "Home", path: "/" },
-    { name: "Research Paper", path: "/researchpaper", icon: <Sprout className="h-4 w-4" /> },
+    { name: "Term Sheet Analyzer", path: "/researchpaper", icon: <Sprout className="h-4 w-4" /> },
     // { name: "AI Dashboard", path: "/aidashboard", icon: <GraduationCap className="h-4 w-4" /> },
     // { name: "ATS Analyzer", path: "/ats", icon: <Users className="h-4 w-4" /> },
     // { name: "GitHub Chat", path: "/githubchat", icon: <GraduationCap className="h-4 w-4" /> },
