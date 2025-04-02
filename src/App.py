@@ -94,6 +94,15 @@ client = OpenAI(
     api_key="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"
 )
 
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "https://barclays-efxp.vercel.app"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    return response
+
+
 @app.route("/generate-quiz", methods=["POST"])
 def gernerate_questions_from_llm():
     data = request.get_json()

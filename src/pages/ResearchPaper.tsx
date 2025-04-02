@@ -85,7 +85,7 @@ const ResearchPaperAnalyzer = () => {
     const formData = new FormData();
     formData.append("pdf", file);
 
-    const response = await fetch("https://barclays-2.onrender.com/extract-pdf", {
+    const response = await fetch("https://barclays-1.onrender.com/extract-pdf", {
       method: "POST",
       body: formData,
     });
