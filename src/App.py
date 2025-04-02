@@ -5,7 +5,7 @@ from openai import OpenAI
 import json
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS to allow frontend access
+CORS(app, origins="https://barclays-efxp.vercel.app/")  # Enable CORS to allow frontend access
 
 # Sample database of quiz questions
 questions_db = {
