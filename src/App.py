@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pdfplumber
+from openai import OpenAI
+import json
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS to allow frontend access
@@ -84,8 +86,7 @@ career_goals_db = {
 #     else:
 #         return jsonify({"error": "No questions available for this topic"}), 404
 
-from openai import OpenAI
-import json
+
 
 
 client = OpenAI(
