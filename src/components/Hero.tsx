@@ -10,11 +10,9 @@ const Hero = () => {
         <div className="text-center space-y-8">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
             Hello, Welcome to
-            <span className="text-primary block">CogniLearn</span>
+            <span className="text-primary block">TeamXero</span>
           </h1>
-          <p className="max-w-2xl mx-auto text-xl text-muted-foreground">
-            Transform your learning journey with personalized quizzes, research assistance, and intelligent performance tracking.
-          </p>
+          
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Button
               asChild

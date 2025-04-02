@@ -323,7 +323,7 @@ const ResearchPaperAnalyzer = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 px-4 py-10 relative">
+    <div className="min-h-screen bg-black px-4 py-10 relative">
       <div className="fixed top-5 right-5 space-y-3 z-50">
         {toasts.map((toast) => (
           <div
